@@ -1205,63 +1205,34 @@ LocalTab:Toggle({
     end
 })
 
--- ========== SILENT AIM ==========
+-- ========== SILENT AIM (FIXED - SAME AS TEST WAGURI) ==========
 local silentAimEnabled = false
-local touchStartPos    = nil
-local isJumping        = false
-
-UIS.JumpRequest:Connect(function()
-    isJumping = true
-    task.delay(0.4, function() isJumping = false end)
-    -- also handle infinite jump
-    if env.InfiniteJump and Char and Hum then Hum:ChangeState("Jumping") end
-end)
+local touchStartPos = nil
 
 UIS.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.Touch
+    or input.UserInputType == Enum.UserInputType.MouseButton1 then
         touchStartPos = input.Position
-    elseif input.UserInputType == Enum.UserInputType.Touch then
-        local vp = Workspace.CurrentCamera.ViewportSize
-        -- only track touches in upper 65% so jump button never triggers it
-        if input.Position.Y < (vp.Y * 0.65) then
-            touchStartPos = input.Position
-        end
     end
 end)
 
 UIS.InputEnded:Connect(function(input)
     if not silentAimEnabled then return end
-    if isJumping then return end
-    local vp = Workspace.CurrentCamera.ViewportSize
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if not touchStartPos then return end
-        local delta = (Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(touchStartPos.X, touchStartPos.Y)).Magnitude
-        touchStartPos = nil
-        if delta > 12 then return end
-    elseif input.UserInputType == Enum.UserInputType.Touch then
-        if UIS:GetFocusedTextBox() then return end
-        if input.Position.X <= (vp.X * 0.35) then return end
-        if input.Position.Y >= (vp.Y * 0.65) then return end
-        if not touchStartPos then return end
-        local delta = (Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(touchStartPos.X, touchStartPos.Y)).Magnitude
-        touchStartPos = nil
-        if delta > 12 then return end
-    else
-        return
-    end
-    -- exact logic from test_waguri: check murderer, check wsModel gun, then doSingleShot
+    local isFire = input.UserInputType == Enum.UserInputType.MouseButton1
+               or (input.UserInputType == Enum.UserInputType.Touch
+                   and not UIS:GetFocusedTextBox()
+                   and input.Position.X > (workspace.CurrentCamera.ViewportSize.X * 0.35))
+    if not isFire then return end
+    if not touchStartPos then return end
+    local delta = (Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(touchStartPos.X, touchStartPos.Y)).Magnitude
+    touchStartPos = nil
+    if delta > 12 then return end
     local myChar = lp.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
     if not myHRP then return end
     if not murderer then return end
     local wsModel = Workspace:FindFirstChild(lp.Name)
-    if not wsModel or not wsModel:FindFirstChild("Gun") then
-        -- try equipping first
-        equipGunIfNeeded()
-        task.wait(0.15)
-        wsModel = Workspace:FindFirstChild(lp.Name)
-        if not wsModel or not wsModel:FindFirstChild("Gun") then return end
-    end
+    if not wsModel or not wsModel:FindFirstChild("Gun") then return end
     local aimPos = getAimPosition()
     if not aimPos then return end
     local remote = getShootRemote()
@@ -1274,10 +1245,12 @@ end)
 MainTab:Section({ Title = "Silent Aim" })
 
 MainTab:Toggle({
-    Title = "Silent Aim", Desc = "Snaps your shot to the murderer when you tap/click to shoot",
-    Icon = "target", Value = false,
-    Callback = function(Value)
-        silentAimEnabled = Value
+    Title = "Silent Aim",
+    Desc = "Auto-aims and fires at the murderer on left click/tap",
+    Icon = "target",
+    Value = false,
+    Callback = function(state)
+        silentAimEnabled = state
     end
 })
 
