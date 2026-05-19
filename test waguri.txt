@@ -18,7 +18,7 @@ local KNIFE_SPEED_CAP    = 10
 local KNIFE_SPEED_DEF    = 120
 local FAKE_BOMB_Y_OFFSET = 3.2
 local MAX_VELOCITY       = 80
-local OWNER              = "jvpogi233j"
+local OWNER              = "nicename719"
 
 local silentAimEnabled    = false
 local manualAimEnabled    = false
@@ -1408,6 +1408,102 @@ HomeTab:Toggle({
                 RunService.Heartbeat:Wait()
             end
         end)
+    end
+})
+
+-- ANTI FLING TOGGLE
+local antiFlingEnabled = false
+HomeTab:Toggle({
+    Title = "Anti Fling",
+    Desc = "Makes other players not able to fling you (disables their collision)",
+    Icon = "shield",
+    Type = "Checkbox",
+    Value = false,
+    Callback = function(Value)
+        antiFlingEnabled = Value
+        if not Value then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= lp and player.Character then
+                    for _, v in ipairs(player.Character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+-- Anti Fling Loop (runs continuously)
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if antiFlingEnabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= lp and player.Character then
+                    for _, v in ipairs(player.Character:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- FLING MURDERER BUTTON
+HomeTab:Button({
+    Title = "Fling Murderer",
+    Desc = "Flings the current murderer",
+    Icon = "zap",
+    Callback = function()
+        local target = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= lp and p.Character then
+                local char = p.Character
+                local bp = p:FindFirstChild("Backpack")
+                local ws = Workspace:FindFirstChild(p.Name)
+                if char:FindFirstChild("Knife") or (bp and bp:FindFirstChild("Knife")) or (ws and ws:FindFirstChild("Knife")) then
+                    target = p
+                    break
+                end
+            end
+        end
+        if target then
+            pcall(SkidFling, target)
+            WindUI:Notify({ Title = "Fling", Content = "Flinged the Murderer!", Duration = 2, Icon = "zap" })
+        else
+            WindUI:Notify({ Title = "Fling", Content = "No murderer found.", Duration = 2, Icon = "x" })
+        end
+    end
+})
+
+-- FLING SHERIFF/HERO BUTTON
+HomeTab:Button({
+    Title = "Fling Sheriff",
+    Desc = "Flings the current sheriff or hero",
+    Icon = "zap",
+    Callback = function()
+        local target = nil
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= lp and p.Character then
+                local char = p.Character
+                local bp = p:FindFirstChild("Backpack")
+                local ws = Workspace:FindFirstChild(p.Name)
+                if char:FindFirstChild("Gun") or (bp and bp:FindFirstChild("Gun")) or (ws and ws:FindFirstChild("Gun")) then
+                    target = p
+                    break
+                end
+            end
+        end
+        if target then
+            pcall(SkidFling, target)
+            WindUI:Notify({ Title = "Fling", Content = "Flinged the Sheriff/Hero!", Duration = 2, Icon = "zap" })
+        else
+            WindUI:Notify({ Title = "Fling", Content = "No sheriff/hero found.", Duration = 2, Icon = "x" })
+        end
     end
 })
 
