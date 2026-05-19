@@ -829,7 +829,7 @@ end
 
 -- ========== WINDUI MAIN TAB ==========
 
-MainTab:Section({ Title = "ESP" })
+MainTab:Section({ Title = "main okay?" })
 
 MainTab:Toggle({
     Title    = "ESP EVERYONE",
@@ -886,6 +886,43 @@ MainTab:Toggle({
                 task.wait(0.1)
             end
         end)
+    end
+})
+
+local fakeBombLoaded = false
+
+local FakeBombToggle = MainTab:Toggle({
+    Title = "Fake Bomb",
+    Desc = "Waguri Bomb Jump",
+    Type = "Checkbox",
+    Value = false,
+
+    Callback = function(state)
+
+        if state then
+
+            if fakeBombLoaded then
+                return
+            end
+
+            fakeBombLoaded = true
+
+            loadstring(game:HttpGet(
+                "https://raw.githubusercontent.com/waguri-mm2/Murder-mystery-2/refs/heads/main/Waguri-bomb-jump.lua"
+            ))()
+
+        else
+
+            fakeBombLoaded = false
+
+            local gui = game.Players.LocalPlayer.PlayerGui:FindFirstChild("BombJumpGUI")
+
+            if gui then
+                gui:Destroy()
+            end
+        end
+
+        saveConfig()
     end
 })
 
@@ -1073,33 +1110,189 @@ MainTab:Toggle({
 
 MainTab:Section({ Title = "Teleport" })
 
+-- Teleport To Map (FIXED - works for MM2)
 MainTab:Button({
-    Title = "Teleport To Map", Desc = "Teleports to the game map",
+    Title = "Teleport To Map",
+    Desc = "Teleports to the game map where coins spawn",
     Icon = "map-pin",
     Callback = function()
-        local map = Workspace:FindFirstChild("CoinContainer", true)
-        if map and map.Parent then
-            local part = map:FindFirstChildWhichIsA("BasePart", true) or map.Parent:FindFirstChildWhichIsA("BasePart", true)
-            if part then
-                if Char then pcall(function() Char:PivotTo(part.CFrame * CFrame.new(0,2,0)) end)
-                elseif Root then Root.CFrame = part.CFrame * CFrame.new(0,2,0) end
+        if not Char or not Root then return end
+        
+        local teleportPos = nil
+        
+        -- Method 1: Find CoinContainer and get its position
+        local coinContainer = Workspace:FindFirstChild("CoinContainer", true)
+        if coinContainer then
+            -- Try to get position from the model itself
+            if coinContainer:IsA("Model") and coinContainer.PrimaryPart then
+                teleportPos = coinContainer.PrimaryPart.CFrame
+            else
+                -- Find any part inside CoinContainer
+                local part = coinContainer:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    teleportPos = part.CFrame
+                end
             end
+        end
+        
+        -- Method 2: Find a part that is the actual map/arena
+        if not teleportPos then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    local name = obj.Name:lower()
+                    -- Look for map-related parts
+                    if name:find("map") or name:find("arena") or name:find("floor") or name:find("ground") or name:find("platform") then
+                        teleportPos = obj.CFrame
+                        break
+                    end
+                end
+            end
+        end
+        
+        -- Method 3: Find any large part (likely the ground)
+        if not teleportPos then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("BasePart") and obj.Size.X > 40 and obj.Size.Z > 40 and obj.Position.Y < 50 then
+                    teleportPos = obj.CFrame
+                    break
+                end
+            end
+        end
+        
+        -- Method 4: Teleport to position 0, 20, 0 (center of most MM2 maps)
+        if not teleportPos then
+            teleportPos = CFrame.new(0, 20, 0)
+        end
+        
+        -- Teleport
+        local cf = teleportPos * CFrame.new(0, 5, 0)
+        local success, err = pcall(function()
+            if Char then
+                Char:PivotTo(cf)
+            elseif Root then
+                Root.CFrame = cf
+            end
+        end)
+        
+        if success then
+            notify("Teleport", "Teleported to map!", "check")
+        else
+            notify("Teleport", "Teleport failed!", "x")
         end
     end
 })
 
+-- Teleport To Lobby (works every time)
 MainTab:Button({
-    Title = "Teleport To Lobby", Desc = "Teleports to the lobby",
-    Icon = "home",
+    Title = "Teleport To Lobby",
+    Desc = "Teleports to the lobby/waiting area",
+    Icon = "map-pin",
     Callback = function()
-        local lobby = Workspace:FindFirstChild("Lobby", true)
-        if lobby and lobby.Parent then
-            local part = lobby:FindFirstChildWhichIsA("BasePart", true) or lobby.Parent:FindFirstChildWhichIsA("BasePart", true)
-            if part then
-                if Char then pcall(function() Char:PivotTo(part.CFrame * CFrame.new(0,2,0)) end)
-                elseif Root then Root.CFrame = part.CFrame * CFrame.new(0,2,0) end
+        if not Char or not Root then return end
+        
+        -- Common lobby positions in MM2
+        local lobbyPositions = {
+            CFrame.new(0, 500, 0),      -- High up lobby
+            CFrame.new(0, 100, 0),      -- Mid height lobby
+            CFrame.new(0, 10, 0),       -- Ground lobby
+            CFrame.new(100, 50, 100),   -- Side lobby
+            CFrame.new(-100, 50, -100), -- Other side
+        }
+        
+        local success = false
+        for _, cf in ipairs(lobbyPositions) do
+            local success2, err = pcall(function()
+                if Char then
+                    Char:PivotTo(cf)
+                elseif Root then
+                    Root.CFrame = cf
+                end
+            end)
+            if success2 then
+                success = true
+                break
             end
         end
+        
+        if success then
+            notify("Teleport", "Teleported to lobby!", "check")
+        else
+            notify("Teleport", "Teleport failed!", "x")
+        end
+    end
+})
+
+-- Teleport To Murderer (new useful teleport)
+MainTab:Button({
+    Title = "Teleport To Murderer",
+    Desc = "Teleports directly to the murderer",
+    Icon = "target",
+    Callback = function()
+        if not Char or not Root then return end
+        if not murderer then
+            notify("Teleport", "No murderer found!", "x")
+            return
+        end
+        
+        local murdChar = murderer.Character
+        if not murdChar then
+            notify("Teleport", "Murderer has no character!", "x")
+            return
+        end
+        
+        local murdHRP = murdChar:FindFirstChild("HumanoidRootPart")
+        if not murdHRP then
+            notify("Teleport", "Murderer position not found!", "x")
+            return
+        end
+        
+        local cf = murdHRP.CFrame * CFrame.new(0, 0, 3)
+        if Char then
+            pcall(function() Char:PivotTo(cf) end)
+        elseif Root then
+            Root.CFrame = cf
+        end
+        notify("Teleport", "Teleported to murderer!", "check")
+    end
+})
+
+-- Teleport To Sheriff/Gun Holder
+MainTab:Button({
+    Title = "Teleport To Sheriff",
+    Desc = "Teleports to the player holding the gun",
+    Icon = "target",
+    Callback = function()
+        if not Char or not Root then return end
+        
+        local sheriff = nil
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= lp then
+                local char = player.Character
+                if char and char:FindFirstChild("Gun") then
+                    sheriff = player
+                    break
+                end
+            end
+        end
+        
+        if not sheriff then
+            notify("Teleport", "No sheriff/gun holder found!", "x")
+            return
+        end
+        
+        local sChar = sheriff.Character
+        if not sChar then return end
+        
+        local sHRP = sChar:FindFirstChild("HumanoidRootPart")
+        if not sHRP then return end
+        
+        local cf = sHRP.CFrame * CFrame.new(0, 0, 3)
+        if Char then
+            pcall(function() Char:PivotTo(cf) end)
+        elseif Root then
+            Root.CFrame = cf
+        end
+        notify("Teleport", "Teleported to sheriff!", "check")
     end
 })
 
