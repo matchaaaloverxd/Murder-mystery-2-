@@ -195,6 +195,7 @@ Window:EditOpenButton({
     Draggable       = true,
 })
 
+local MM2Tab = Window:Tab({ Title = "MM2", Icon = "sword" })
 local HomeTab     = Window:Tab({ Title = "Home",     Icon = "radar"    })
 local MainTab     = Window:Tab({ Title = "Main",     Icon = "sword"    })
 local PlayersTab  = Window:Tab({ Title = "Players",  Icon = "users"    })
@@ -1325,6 +1326,252 @@ local function doKillAll()
     local ok, err = pcall(function() stab:FireServer() end)
     if not ok then warn("[Waguri] KillAll FireServer: " .. tostring(err)) end
 end
+
+-- ========== MM2 TAB - YUKIO BUTTONS ==========
+
+-- Add these functions AFTER doKillAll() function (find it around line 800)
+
+local function yukioShoot()
+    local myChar = lp.Character
+    if not myChar then
+        WindUI:Notify({ Title = "Shoot", Content = "No character!", Duration = 2, Icon = "x" })
+        return
+    end
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+    if not murderer then
+        WindUI:Notify({ Title = "Shoot", Content = "No murderer found!", Duration = 2, Icon = "x" })
+        return
+    end
+    local aimPos = getAimPosition()
+    if not aimPos then
+        WindUI:Notify({ Title = "Shoot", Content = "Cannot get aim position!", Duration = 2, Icon = "x" })
+        return
+    end
+    local remote = getShootRemote()
+    if not remote then
+        equipGunIfNeeded()
+        remote = getShootRemote()
+        if not remote then
+            WindUI:Notify({ Title = "Shoot", Content = "No gun found! Use Get Gun first.", Duration = 2, Icon = "x" })
+            return
+        end
+    end
+    pcall(function()
+        remote:FireServer(CFrame.new(myHRP.Position, aimPos), CFrame.new(aimPos))
+    end)
+    WindUI:Notify({ Title = "Shoot", Content = "🔫 Shot fired!", Duration = 1, Icon = "target" })
+end
+
+local function yukioKillAll()
+    if not isLpMurd then
+        WindUI:Notify({ Title = "Kill All", Content = "You are not the Murderer!", Duration = 2, Icon = "x" })
+        return
+    end
+    local char = lp.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local knife = equipKnife(char, hum)
+    if not knife then
+        WindUI:Notify({ Title = "Kill All", Content = "No knife found!", Duration = 2, Icon = "x" })
+        return
+    end
+    local knifeEvents = knife:FindFirstChild("Events")
+    local stab = knifeEvents and knifeEvents:FindFirstChild("KnifeStabbed")
+    if not stab then
+        WindUI:Notify({ Title = "Kill All", Content = "Stab remote not found!", Duration = 2, Icon = "x" })
+        return
+    end
+    local myHRP = char:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function() hrp.CFrame = myHRP.CFrame + myHRP.CFrame.LookVector end)
+            end
+        end
+    end
+    pcall(function() stab:FireServer() end)
+    WindUI:Notify({ Title = "Kill All", Content = "🗡️ Killed all players!", Duration = 1, Icon = "sword" })
+end
+
+local function yukioGetGun()
+    local char = lp.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local gunDrop = nil
+    for _, desc in ipairs(Workspace:GetDescendants()) do
+        if desc.Name == "GunDrop" and desc:IsA("BasePart") then
+            gunDrop = desc
+            break
+        end
+    end
+    if not gunDrop then
+        WindUI:Notify({ Title = "Get Gun", Content = "No gun drop found!", Duration = 2, Icon = "x" })
+        return
+    end
+    local savedCFrame = hrp.CFrame
+    hrp.CFrame = CFrame.new(gunDrop.Position)
+    firetouchinterest(gunDrop, hrp, 0)
+    task.wait(0.1)
+    hrp.CFrame = savedCFrame
+    equipGunIfNeeded()
+    WindUI:Notify({ Title = "Get Gun", Content = "🎯 Grabbed the gun!", Duration = 1, Icon = "target" })
+end
+
+local function yukioInvisible()
+    if invisActive then
+        WindUI:Notify({ Title = "Invisible", Content = "Please wait!", Duration = 2, Icon = "x" })
+        return
+    end
+    invisActive = true
+    local char = lp.Character
+    if not char then
+        WindUI:Notify({ Title = "Invisible", Content = "No character found!", Duration = 2, Icon = "x" })
+        return
+    end
+    if invisSnd then invisSnd:Play() end
+
+    if not isInvisible then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local savedCF = hrp.CFrame
+        local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+        if not torso then return end
+
+        local hidePos = Vector3.new(0, 10000, 0)
+        char:MoveTo(hidePos)
+        task.wait(0.15)
+
+        local seat = Instance.new("Seat")
+        seat.Name = "Waguri_InvisChair"
+        seat.Anchored = false
+        seat.CanCollide = false
+        seat.Transparency = 1
+        seat.Position = hidePos
+        seat.Parent = workspace
+
+        local weld = Instance.new("Weld")
+        weld.Part0 = seat
+        weld.Part1 = torso
+        weld.Parent = seat
+
+        task.wait()
+        seat.CFrame = savedCF
+        invisSeat = seat
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") or v:IsA("Decal") then
+                v.Transparency = 0.6
+            end
+        end
+        isInvisible = true
+        WindUI:Notify({ Title = "Invisible", Content = "You are now invisible!", Duration = 2, Icon = "eye-off" })
+    else
+        if invisSeat and invisSeat.Parent then invisSeat:Destroy() end
+        local stray = workspace:FindFirstChild("Waguri_InvisChair")
+        if stray then stray:Destroy() end
+        invisSeat = nil
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") or v:IsA("Decal") then
+                v.Transparency = 0
+            end
+        end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.Transparency = 0 end
+        isInvisible = false
+        WindUI:Notify({ Title = "Invisible", Content = "You are now visible!", Duration = 2, Icon = "eye" })
+    end
+    invisActive = false
+end
+
+-- MM2 Tab Content (put this at the VERY END of the script, before WindUI:Popup)
+MM2Tab:Paragraph({
+    Title = "⚔️ YUKIO COMBAT ⚔️",
+    Desc = "Click buttons below to fight!",
+    Color = "Red",
+})
+
+MM2Tab:Button({
+    Title = "🔫 SHOOT MURDERER",
+    Desc = "Auto-aims and shoots the murderer",
+    Icon = "target",
+    Callback = function()
+        yukioShoot()
+    end
+})
+
+MM2Tab:Button({
+    Title = "🗡️ KILL ALL",
+    Desc = "Kills all players (Requires Murderer)",
+    Icon = "sword",
+    Callback = function()
+        yukioKillAll()
+    end
+})
+
+MM2Tab:Button({
+    Title = "🎯 GET GUN",
+    Desc = "Teleports to and grabs the gun",
+    Icon = "target",
+    Callback = function()
+        yukioGetGun()
+    end
+})
+
+MM2Tab:Button({
+    Title = "👻 INVISIBLE",
+    Desc = "Makes your character invisible",
+    Icon = "eye-off",
+    Callback = function()
+        yukioInvisible()
+    end
+})
+
+MM2Tab:Divider()
+
+MM2Tab:Paragraph({ Title = "⚙️ SETTINGS", Desc = "Feature toggles", Color = "Red" })
+
+-- Use different variable names to avoid conflicts
+local yukioManualAim = false
+MM2Tab:Toggle({
+    Title = "Manual Aim",
+    Desc = "Enable Shoot button",
+    Type = "Checkbox",
+    Value = false,
+    Callback = function(state)
+        yukioManualAim = state
+    end
+})
+
+local yukioAutoGrab = false
+MM2Tab:Toggle({
+    Title = "Auto Grab Gun",
+    Desc = "Auto grabs gun when dropped",
+    Type = "Checkbox",
+    Value = false,
+    Callback = function(state)
+        yukioAutoGrab = state
+    end
+})
+
+MM2Tab:Input({
+    Title = "Walk Speed",
+    Desc = "Enter a value between 0 and 100",
+    Icon = "footprints",
+    Placeholder = "Default: 17",
+    Numeric = true,
+    Callback = function(value)
+        local n = tonumber(value)
+        if n then
+            local char = lp.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char:FindFirstChildOfClass("Humanoid").WalkSpeed = math.clamp(n, 0, 100)
+            end
+        end
+    end
+})
 
 -- ── Home Tab: Seconds Life (Godmode) ─────────────────────────────────────────
 HomeTab:Paragraph({
