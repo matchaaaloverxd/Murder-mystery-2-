@@ -2218,25 +2218,38 @@ myConfig:Register("ThemeColor",   ThemeColor)
 local touchStartPos = nil
 
 UIS.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch
-    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         touchStartPos = input.Position
+    elseif input.UserInputType == Enum.UserInputType.Touch then
+        local vp = workspace.CurrentCamera.ViewportSize
+        -- Only track the touch if it starts in the upper 65% of the screen
+        -- This excludes the jump button and all bottom control buttons entirely
+        if input.Position.Y < (vp.Y * 0.65) then
+            touchStartPos = input.Position
+        end
     end
 end)
 
 UIS.InputEnded:Connect(function(input)
     if not silentAimEnabled then return end
-    local vp = workspace.CurrentCamera.ViewportSize
-    local isFire = input.UserInputType == Enum.UserInputType.MouseButton1
-               or (input.UserInputType == Enum.UserInputType.Touch
-                   and not UIS:GetFocusedTextBox()
-                   and input.Position.X > (vp.X * 0.35)
-                   and input.Position.Y < (vp.Y * 0.75)) -- exclude bottom area where jump/action buttons sit
-    if not isFire then return end
-    if not touchStartPos then return end
-    local delta = (Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(touchStartPos.X, touchStartPos.Y)).Magnitude
-    touchStartPos = nil
-    if delta > 12 then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if not touchStartPos then return end
+        local delta = (Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(touchStartPos.X, touchStartPos.Y)).Magnitude
+        touchStartPos = nil
+        if delta > 12 then return end
+    elseif input.UserInputType == Enum.UserInputType.Touch then
+        if UIS:GetFocusedTextBox() then return end
+        local vp = workspace.CurrentCamera.ViewportSize
+        -- Must start and end in upper 65% and right 65% of screen
+        if input.Position.X <= (vp.X * 0.35) then return end
+        if input.Position.Y >= (vp.Y * 0.65) then return end
+        if not touchStartPos then return end
+        local delta = (Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(touchStartPos.X, touchStartPos.Y)).Magnitude
+        touchStartPos = nil
+        if delta > 12 then return end
+    else
+        return
+    end
     local myChar = lp.Character
     local myHRP  = myChar and myChar:FindFirstChild("HumanoidRootPart")
     if not myHRP then return end
