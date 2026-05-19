@@ -2350,48 +2350,8 @@ local function startRoleESP()
 end
 
 VisualsTab:Toggle({
-    Title    = "Role ESP (Names: Murderer & Sheriff only)",
-    Desc     = "Shows highlights for all, but names only for Murderer (red) and Sheriff (blue)",
-    Icon     = "eye",
-    Type     = "Checkbox",
-    Value    = false,
-    Callback = function(state)
-        roleESPEnabled = state
-        if state then
-            startRoleESP()
-        else
-            clearRoleESP()
-            if roleESPLoop then
-                task.cancel(roleESPLoop)
-                roleESPLoop = nil
-            end
-        end
-    end
-})
-
-VisualsTab:Toggle({
-    Title    = "Role ESP (Names: Murderer & Sheriff only)",
-    Desc     = "Shows highlights for all, but names only for Murderer (red) and Sheriff (blue)",
-    Icon     = "eye",
-    Type     = "Checkbox",
-    Value    = false,
-    Callback = function(state)
-        roleESPEnabled = state
-        if state then
-            startRoleESP()
-        else
-            clearRoleESP()
-            if roleESPLoop then
-                task.cancel(roleESPLoop)
-                roleESPLoop = nil
-            end
-        end
-    end
-})
-
-VisualsTab:Toggle({
-    Title    = "Role ESP (Instant Reveal)",
-    Desc     = "Shows everyone's role via server data",
+    Title    = "ESP EVERYONE",
+    Desc     = "I RECOMMEND U TO USE THIS :3",
     Icon     = "eye",
     Type     = "Checkbox",
     Value    = false,
