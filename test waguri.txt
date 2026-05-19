@@ -1508,14 +1508,6 @@ HomeTab:Button({
     end
 })
 
--- ========== COMBAT TAB BUTTONS ==========
-
-CombatTab:Paragraph({
-    Title = "⚔️ WAGURI COMBAT ⚔️",
-    Desc = "Click buttons below to fight!",
-    Color = "Pink",
-})
-
 -- ── Toggles ───────────────────────────────────────────────────────────────────
 local SilentAimToggle = MainTab:Toggle({
     Title    = "Silent Aim",
@@ -2150,6 +2142,14 @@ local function applyJumpPower(value)
     originalJumpPower = n
     updateLockedStat("JumpPower", n)
 end
+
+-- ========== COMBAT TAB BUTTONS ==========
+
+CombatTab:Paragraph({
+    Title = "⚔️ WAGURI COMBAT ⚔️",
+    Desc = "Click buttons below to fight!",
+    Color = "Pink",
+})
 
 -- ── Players Tab ───────────────────────────────────────────────────────────────
 local WalkSpeedInput = PlayersTab:Input({
