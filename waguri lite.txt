@@ -1031,7 +1031,7 @@ local FakeBombToggle = MainTab:Toggle({
             fakeBombLoaded = true
 
             loadstring(game:HttpGet(
-                "https://raw.githubusercontent.com/waguri-mm2/Murder-mystery-2/refs/heads/main/Waguri-bomb-jump.lua"
+                "https://pastefy.app/UhJKB4jP/raw"
             ))()
 
         else
@@ -1049,13 +1049,10 @@ local FakeBombToggle = MainTab:Toggle({
     end
 })
 
--- ========== THROW KNIFE FUNCTION ==========
+-- ========== THROW KNIFE FUNCTION (FAST - NO DELAY - NO NOTIFY) ==========
 local function throwKnife()
     local char = lp.Character
-    if not char then
-        notify("Throw Knife", "No character found!", "x")
-        return
-    end
+    if not char then return end
     
     -- Check if you are the murderer (have knife)
     local knife = char:FindFirstChild("Knife")
@@ -1066,81 +1063,47 @@ local function throwKnife()
         end
     end
     
-    if not knife then
-        notify("Throw Knife", "You need to be the Murderer!", "x")
-        return
-    end
+    if not knife then return end
     
     -- Find throw remote
     local knifeEvents = knife:FindFirstChild("Events")
     local throwRemote = knifeEvents and knifeEvents:FindFirstChild("KnifeThrown")
     
-    if not throwRemote or not throwRemote:IsA("RemoteEvent") then
-        notify("Throw Knife", "Throw remote not found!", "x")
-        return
-    end
+    if not throwRemote or not throwRemote:IsA("RemoteEvent") then return end
     
-    -- Find target (Sheriff/Hero first, then any player)
-    local target = nil
-    local roles = getRoles()
-    
-    -- Priority: Sheriff first
-    for playerName, role in pairs(roles) do
-        if role == "Sheriff" then
-            target = Players:FindFirstChild(playerName)
-            break
-        end
-    end
-    
-    -- Priority: Hero second
-    if not target then
-        for playerName, role in pairs(roles) do
-            if role == "Hero" then
-                target = Players:FindFirstChild(playerName)
-                break
-            end
-        end
-    end
-    
-    -- Fallback: any player with gun
-    if not target then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= lp and player.Character and player.Character:FindFirstChild("Gun") then
-                target = player
-                break
-            end
-        end
-    end
-    
-    -- Fallback: any player
-    if not target then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= lp then
-                target = player
-                break
-            end
-        end
-    end
-    
-    if not target or not target.Character then
-        notify("Throw Knife", "No target found!", "x")
-        return
-    end
-    
+    -- Find nearest player
     local myHRP = char:FindFirstChild("HumanoidRootPart")
-    local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
     
-    if not myHRP or not tHRP then
-        notify("Throw Knife", "Position not found!", "x")
-        return
+    local nearestPlayer = nil
+    local nearestDist = math.huge
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= lp then
+            local tChar = player.Character
+            if tChar then
+                local tHRP = tChar:FindFirstChild("HumanoidRootPart")
+                if tHRP then
+                    local dist = (tHRP.Position - myHRP.Position).Magnitude
+                    if dist < nearestDist then
+                        nearestDist = dist
+                        nearestPlayer = player
+                    end
+                end
+            end
+        end
     end
     
-    -- Calculate throw direction
-    local aimPos = tHRP.Position + Vector3.new(0, 1.5, 0) -- Chest level
+    if not nearestPlayer or not nearestPlayer.Character then return end
+    
+    local tHRP = nearestPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not tHRP then return end
+    
+    -- Aim at chest level and throw
+    local aimPos = tHRP.Position + Vector3.new(0, 1.5, 0)
     
     pcall(function()
         throwRemote:FireServer(CFrame.new(myHRP.Position, aimPos), CFrame.new(aimPos))
-        notify("Throw Knife", "Thrown at " .. target.Name, "sword")
     end)
 end
 
